@@ -1,0 +1,341 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2023-04-16T10:38:36Z"
+  generation: 1
+  labels:
+    app: reconciler
+    configmanagement.gke.io/arch: csmr
+    configmanagement.gke.io/system: "true"
+    configsync.gke.io/sync-kind: RootSync
+    configsync.gke.io/sync-name: root-sync
+    configsync.gke.io/sync-namespace: config-management-system
+  name: root-reconciler
+  namespace: config-management-system
+  ownerReferences:
+  - apiVersion: configsync.gke.io/v1beta1
+    blockOwnerDeletion: true
+    controller: true
+    kind: RootSync
+    name: root-sync
+    uid: 06556419-f1d8-4c87-976d-7a1364e8af54
+  resourceVersion: "48308"
+  uid: d3dcdf9f-d692-4b0f-b00e-c4337387ec3d
+spec:
+  minReadySeconds: 10
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: reconciler
+      configsync.gke.io/deployment-name: root-reconciler
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      creationTimestamp: null
+      labels:
+        app: reconciler
+        configsync.gke.io/deployment-name: root-reconciler
+        configsync.gke.io/reconciler: root-reconciler
+        configsync.gke.io/sync-kind: RootSync
+        configsync.gke.io/sync-name: root-sync
+        configsync.gke.io/sync-namespace: config-management-system
+    spec:
+      containers:
+      - args:
+        - --v=0
+        - --repo-root=/repo
+        - --source-root=source
+        - --hydrated-root=hydrated
+        - --source-link=rev
+        - --hydrated-link=rev
+        command:
+        - /hydration-controller
+        env:
+        - name: SOURCE_TYPE
+          value: git
+        - name: SCOPE
+          value: :root
+        - name: RECONCILER_NAME
+          value: root-reconciler
+        - name: NAMESPACE_NAME
+          value: :root
+        - name: SYNC_DIR
+        - name: HYDRATION_POLLING_PERIOD
+          value: 5s
+        image: gcr.io/config-management-release/hydration-controller:v1.14.3-rc.3
+        imagePullPolicy: IfNotPresent
+        name: hydration-controller
+        resources:
+          requests:
+            cpu: 10m
+            memory: 100Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - NET_RAW
+          readOnlyRootFilesystem: false
+          runAsUser: 65533
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /repo
+          name: repo
+      - args:
+        - --v=0
+        - --repo-root=/repo
+        - --source-dir=/repo/source/rev
+        - --hydrated-root=/repo/hydrated
+        - --hydrated-link=rev
+        command:
+        - /reconciler
+        env:
+        - name: KUBECACHEDIR
+          value: /.kube/cache
+        - name: CLUSTER_NAME
+        - name: SCOPE
+          value: :root
+        - name: SYNC_NAME
+          value: root-sync
+        - name: RECONCILER_NAME
+          value: root-reconciler
+        - name: NAMESPACE_NAME
+          value: :root
+        - name: SYNC_DIR
+        - name: SOURCE_REPO
+          value: https://github.com/AndreiMatrosau/anthos-kubectl
+        - name: SOURCE_TYPE
+          value: git
+        - name: STATUS_MODE
+          value: enabled
+        - name: RECONCILE_TIMEOUT
+          value: 5m0s
+        - name: RECONCILER_POLLING_PERIOD
+          value: 15s
+        - name: API_SERVER_TIMEOUT
+          value: 5s
+        - name: SOURCE_BRANCH
+          value: main
+        - name: SOURCE_REV
+          value: HEAD
+        - name: SOURCE_FORMAT
+          value: unstructured
+        image: gcr.io/config-management-release/reconciler:v1.14.3-rc.3
+        imagePullPolicy: IfNotPresent
+        name: reconciler
+        resources:
+          requests:
+            cpu: 50m
+            memory: 200Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - NET_RAW
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /repo
+          name: repo
+          readOnly: true
+        - mountPath: /.kube
+          name: kube
+      - args:
+        - --root=/repo/source
+        - --dest=rev
+        - --max-sync-failures=30
+        - --error-file=error.json
+        - --v=5
+        env:
+        - name: GIT_SYNC_REPO
+          value: https://github.com/AndreiMatrosau/anthos-kubectl
+        - name: GIT_KNOWN_HOSTS
+          value: "false"
+        - name: GIT_SYNC_DEPTH
+          value: "1"
+        - name: GIT_SYNC_WAIT
+          value: "15.000000"
+        - name: GIT_SYNC_BRANCH
+          value: main
+        - name: GIT_SYNC_REV
+          value: HEAD
+        - name: GIT_SYNC_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: username
+              name: git-creds
+        - name: GIT_SYNC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: token
+              name: git-creds
+        image: gcr.io/config-management-release/git-sync:v3.6.4-gke.1__linux_amd64
+        imagePullPolicy: IfNotPresent
+        name: git-sync
+        resources:
+          requests:
+            cpu: 10m
+            memory: 200Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - NET_RAW
+          readOnlyRootFilesystem: false
+          runAsUser: 65533
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/git-secret
+          name: git-creds
+          readOnly: true
+        - mountPath: /repo
+          name: repo
+      - args:
+        - --config=/conf/otel-agent-config.yaml
+        command:
+        - /otelcol-contrib
+        env:
+        - name: KUBE_POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: KUBE_POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: KUBE_POD_UID
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.uid
+        - name: KUBE_POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: KUBE_NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: KUBE_DEPLOYMENT_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['configsync.gke.io/deployment-name']
+        - name: CONFIGSYNC_SYNC_KIND
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['configsync.gke.io/sync-kind']
+        - name: CONFIGSYNC_SYNC_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['configsync.gke.io/sync-name']
+        - name: CONFIGSYNC_SYNC_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['configsync.gke.io/sync-namespace']
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: k8s.pod.name=$(KUBE_POD_NAME),k8s.pod.namespace=$(KUBE_POD_NAMESPACE),k8s.pod.uid=$(KUBE_POD_UID),k8s.pod.ip=$(KUBE_POD_IP),k8s.node.name=$(KUBE_NODE_NAME),k8s.deployment.name=$(KUBE_DEPLOYMENT_NAME)
+        image: gcr.io/config-management-release/otelcontribcol:v0.54.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 13133
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: otel-agent
+        ports:
+        - containerPort: 55678
+          protocol: TCP
+        - containerPort: 8888
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 13133
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: 10m
+            memory: 100Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - NET_RAW
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /conf
+          name: otel-agent-config-vol
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 65533
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: root-reconciler
+      serviceAccountName: root-reconciler
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: repo
+      - emptyDir: {}
+        name: kube
+      - name: git-creds
+        secret:
+          defaultMode: 288
+          secretName: git-creds
+      - configMap:
+          defaultMode: 420
+          name: otel-agent
+        name: otel-agent-config-vol
+status:
+  availableReplicas: 1
+  conditions:
+  - lastTransitionTime: "2023-04-16T10:39:05Z"
+    lastUpdateTime: "2023-04-16T10:39:05Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2023-04-16T10:38:36Z"
+    lastUpdateTime: "2023-04-16T10:39:05Z"
+    message: ReplicaSet "root-reconciler-65757f5856" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  observedGeneration: 1
+  readyReplicas: 1
+  replicas: 1
+  updatedReplicas: 1

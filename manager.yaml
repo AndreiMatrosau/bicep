@@ -1,0 +1,184 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"reconciler-manager","configmanagement.gke.io/arch":"csmr","configmanagement.gke.io/configmanagement":"config-management","configmanagement.gke.io/system":"true","k8s-app":"kubernetes-config-management"},"name":"reconciler-manager","namespace":"config-management-system","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"49940e9b-d696-4ec1-9c4b-2eb7c0d95a0d"}]},"spec":{"minReadySeconds":10,"replicas":1,"selector":{"matchLabels":{"app":"reconciler-manager"}},"strategy":{"type":"Recreate"},"template":{"metadata":{"labels":{"app":"reconciler-manager","configsync.gke.io/deployment-name":"reconciler-manager"}},"spec":{"containers":[{"args":["--enable-leader-election"],"command":["/reconciler-manager"],"envFrom":[{"configMapRef":{"name":"reconciler-manager","optional":true}}],"image":"gcr.io/config-management-release/reconciler-manager:v1.14.3-rc.3","name":"reconciler-manager","resources":{"requests":{"cpu":"10m","memory":"50Mi"}},"securityContext":{"allowPrivilegeEscalation":false,"readOnlyRootFilesystem":true},"volumeMounts":[{"mountPath":"/deployment.yaml","name":"configs","subPath":"deployment.yaml"}]},{"args":["--config=/conf/otel-agent-config.yaml","--feature-gates=-exporter.googlecloud.OTLPDirect"],"command":["/otelcol-contrib"],"env":[{"name":"KUBE_POD_NAME","valueFrom":{"fieldRef":{"apiVersion":"v1","fieldPath":"metadata.name"}}},{"name":"KUBE_POD_NAMESPACE","valueFrom":{"fieldRef":{"apiVersion":"v1","fieldPath":"metadata.namespace"}}},{"name":"KUBE_POD_UID","valueFrom":{"fieldRef":{"apiVersion":"v1","fieldPath":"metadata.uid"}}},{"name":"KUBE_POD_IP","valueFrom":{"fieldRef":{"apiVersion":"v1","fieldPath":"status.podIP"}}},{"name":"KUBE_NODE_NAME","valueFrom":{"fieldRef":{"apiVersion":"v1","fieldPath":"spec.nodeName"}}},{"name":"KUBE_DEPLOYMENT_NAME","valueFrom":{"fieldRef":{"apiVersion":"v1","fieldPath":"metadata.labels['configsync.gke.io/deployment-name']"}}},{"name":"OTEL_RESOURCE_ATTRIBUTES","value":"k8s.pod.name=$(KUBE_POD_NAME),k8s.pod.namespace=$(KUBE_POD_NAMESPACE),k8s.pod.uid=$(KUBE_POD_UID),k8s.pod.ip=$(KUBE_POD_IP),k8s.node.name=$(KUBE_NODE_NAME),k8s.deployment.name=$(KUBE_DEPLOYMENT_NAME)"}],"image":"gcr.io/config-management-release/otelcontribcol:v0.54.0","livenessProbe":{"httpGet":{"path":"/","port":13133}},"name":"otel-agent","ports":[{"containerPort":55678},{"containerPort":8888}],"readinessProbe":{"httpGet":{"path":"/","port":13133}},"resources":{"limits":{"cpu":1,"memory":"1Gi"},"requests":{"cpu":"10m","memory":"100Mi"}},"securityContext":{"allowPrivilegeEscalation":false,"readOnlyRootFilesystem":true},"volumeMounts":[{"mountPath":"/conf","name":"otel-agent-config-vol"}]}],"securityContext":{"runAsNonRoot":true,"runAsUser":1000},"serviceAccountName":"reconciler-manager","terminationGracePeriodSeconds":10,"volumes":[{"configMap":{"name":"reconciler-manager-cm"},"name":"configs"},{"configMap":{"name":"otel-agent"},"name":"otel-agent-config-vol"}]}}}}
+  creationTimestamp: "2023-04-16T10:26:32Z"
+  generation: 1
+  labels:
+    app: reconciler-manager
+    configmanagement.gke.io/arch: csmr
+    configmanagement.gke.io/configmanagement: config-management
+    configmanagement.gke.io/system: "true"
+    k8s-app: kubernetes-config-management
+  name: reconciler-manager
+  namespace: config-management-system
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: 49940e9b-d696-4ec1-9c4b-2eb7c0d95a0d
+  resourceVersion: "41576"
+  uid: 36503e7c-e752-4fd9-9919-281a64c96fe3
+spec:
+  minReadySeconds: 10
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: reconciler-manager
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: reconciler-manager
+        configsync.gke.io/deployment-name: reconciler-manager
+    spec:
+      containers:
+      - args:
+        - --enable-leader-election
+        command:
+        - /reconciler-manager
+        envFrom:
+        - configMapRef:
+            name: reconciler-manager
+            optional: true
+        image: gcr.io/config-management-release/reconciler-manager:v1.14.3-rc.3
+        imagePullPolicy: IfNotPresent
+        name: reconciler-manager
+        resources:
+          requests:
+            cpu: 10m
+            memory: 50Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /deployment.yaml
+          name: configs
+          subPath: deployment.yaml
+      - args:
+        - --config=/conf/otel-agent-config.yaml
+        - --feature-gates=-exporter.googlecloud.OTLPDirect
+        command:
+        - /otelcol-contrib
+        env:
+        - name: KUBE_POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: KUBE_POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: KUBE_POD_UID
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.uid
+        - name: KUBE_POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: KUBE_NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: KUBE_DEPLOYMENT_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['configsync.gke.io/deployment-name']
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: k8s.pod.name=$(KUBE_POD_NAME),k8s.pod.namespace=$(KUBE_POD_NAMESPACE),k8s.pod.uid=$(KUBE_POD_UID),k8s.pod.ip=$(KUBE_POD_IP),k8s.node.name=$(KUBE_NODE_NAME),k8s.deployment.name=$(KUBE_DEPLOYMENT_NAME)
+        image: gcr.io/config-management-release/otelcontribcol:v0.54.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 13133
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: otel-agent
+        ports:
+        - containerPort: 55678
+          protocol: TCP
+        - containerPort: 8888
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 13133
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: 10m
+            memory: 100Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /conf
+          name: otel-agent-config-vol
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      serviceAccount: reconciler-manager
+      serviceAccountName: reconciler-manager
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: reconciler-manager-cm
+        name: configs
+      - configMap:
+          defaultMode: 420
+          name: otel-agent
+        name: otel-agent-config-vol
+status:
+  availableReplicas: 1
+  conditions:
+  - lastTransitionTime: "2023-04-16T10:26:58Z"
+    lastUpdateTime: "2023-04-16T10:26:58Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2023-04-16T10:26:33Z"
+    lastUpdateTime: "2023-04-16T10:26:58Z"
+    message: ReplicaSet "reconciler-manager-69546f6b9d" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  observedGeneration: 1
+  readyReplicas: 1
+  replicas: 1
+  updatedReplicas: 1
